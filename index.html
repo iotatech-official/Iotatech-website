@@ -54,6 +54,12 @@
     flex-shrink:0;
   }
   .about-btn:hover{color:var(--ink);border-color:var(--accent);}
+  .visit-count{
+    font-size:0.75rem;
+    color:var(--ink-soft);
+    white-space:nowrap;
+    flex-shrink:0;
+  }
   .logo-mark{
     width:46px;height:46px;
     display:flex;align-items:center;justify-content:center;
@@ -415,6 +421,7 @@
       <div class="sub">Hand-picked lab experiment videos, no distractions. iotatech.in</div>
     </div>
     <div class="header-spacer"></div>
+    <span class="visit-count" id="visit-count"></span>
     <button class="about-btn" id="about-btn">About</button>
   </div>
   <div class="level-tabs" id="level-tabs"></div>
@@ -601,8 +608,11 @@ function renderGrid(){
   emptyEl.style.display = "none";
 
   list.forEach(v => {
-    const card = document.createElement('div');
+    const card = document.createElement('a');
     card.className = 'card';
+    card.href = `?v=${v.id}`;
+    card.target = '_blank';
+    card.rel = 'noopener';
     card.innerHTML = `
       <div class="thumb-wrap">
         <img src="https://i.ytimg.com/vi/${v.youtubeId}/hqdefault.jpg" loading="lazy" alt="">
@@ -611,7 +621,6 @@ function renderGrid(){
       <div class="card-title">${v.title}</div>
       <div class="card-meta">${v.channel}</div>
     `;
-    card.addEventListener('click', () => openPlayer(v));
     gridEl.appendChild(card);
   });
 }
@@ -623,7 +632,7 @@ function subscribeUrl(v){
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(v.channel)}`;
 }
 
-function openPlayer(v){
+function showPlayer(v){
   document.getElementById('player-frame').src = `https://www.youtube.com/embed/${v.youtubeId}?rel=0&modestbranding=1`;
   document.getElementById('player-title').textContent = v.title;
   document.getElementById('player-subject').textContent = v.subject;
@@ -632,16 +641,13 @@ function openPlayer(v){
   document.getElementById('subscribe-link').href = subscribeUrl(v);
   document.body.classList.add('player-open');
   document.getElementById('player-view').style.display = 'block';
-  window.scrollTo(0,0);
+  searchRowEl.style.display = 'none';
+  playlistViewEl.style.display = 'none';
 }
 
-function closePlayer(){
-  document.getElementById('player-frame').src = "";
-  document.body.classList.remove('player-open');
-  document.getElementById('player-view').style.display = 'none';
-}
-
-document.getElementById('back-btn').addEventListener('click', closePlayer);
+document.getElementById('back-btn').addEventListener('click', () => {
+  window.location.href = window.location.pathname;
+});
 
 searchEl.addEventListener('input', (e) => {
   state.query = e.target.value.trim().toLowerCase();
@@ -655,9 +661,25 @@ aboutModal.addEventListener('click', (e) => {
   if (e.target === aboutModal) aboutModal.classList.remove('open');
 });
 
+fetch('https://api.countapi.xyz/hit/iotatech-in-labvideos/pagevisits')
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById('visit-count').textContent = d.value.toLocaleString() + ' visits';
+  })
+  .catch(() => {});
+
+const urlParams = new URLSearchParams(window.location.search);
+const requestedId = urlParams.get('v');
+const requestedVideo = requestedId ? VIDEOS.find(v => String(v.id) === requestedId) : null;
+
 renderLevelTabs();
 renderSubjectChips();
-renderMain();
+
+if (requestedVideo){
+  showPlayer(requestedVideo);
+} else {
+  renderMain();
+}
 </script>
 
 </body>
